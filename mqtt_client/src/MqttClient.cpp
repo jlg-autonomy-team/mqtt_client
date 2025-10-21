@@ -955,6 +955,8 @@ void MqttClient::ros2mqtt(
   const std::shared_ptr<rclcpp::SerializedMessage>& serialized_msg,
   const std::string& ros_topic) {
 
+  const auto start_time = std::chrono::steady_clock::now();
+
   Ros2MqttInterface& ros2mqtt = ros2mqtt_[ros_topic];
   std::string mqtt_topic = ros2mqtt.mqtt.topic;
   std::vector<uint8_t> payload_buffer;
@@ -980,6 +982,10 @@ void MqttClient::ros2mqtt(
                   "Cannot send ROS message of type '%s' as primitive message, "
                   "check supported primitive types",
                   ros_msg_type.name.c_str());
+      // Record duration for failed primitive attempt before returning
+      const auto end_time = std::chrono::steady_clock::now();
+      const std::chrono::duration<double> elapsed = end_time - start_time;
+      recordRos2MqttDuration(ros_topic, elapsed.count());
       return;
     }
 
@@ -1067,11 +1073,17 @@ void MqttClient::ros2mqtt(
       "Publishing ROS message type information to MQTT topic '%s' failed: %s",
       mqtt_topic.c_str(), e.what());
   }
+
+  // Record total processing duration for ros2mqtt
+  const auto end_time = std::chrono::steady_clock::now();
+  const std::chrono::duration<double> elapsed = end_time - start_time;
+  recordRos2MqttDuration(ros_topic, elapsed.count());
 }
 
 
 void MqttClient::mqtt2ros(mqtt::const_message_ptr mqtt_msg,
                           const rclcpp::Time& arrival_stamp) {
+  const auto start_time = std::chrono::steady_clock::now();
   std::string mqtt_topic = mqtt_msg->get_topic();
   Mqtt2RosInterface& mqtt2ros = mqtt2ros_[mqtt_topic];
   auto& payload = mqtt_msg->get_payload_ref();
@@ -1125,6 +1137,11 @@ void MqttClient::mqtt2ros(mqtt::const_message_ptr mqtt_msg,
     "Sending ROS message of type '%s' from MQTT broker to ROS topic '%s' ...",
     mqtt2ros.ros.msg_type.c_str(), mqtt2ros.ros.topic.c_str());
   mqtt2ros.ros.publisher->publish(serialized_msg);
+
+  // Record processing duration now that message has been published
+  const auto end_time = std::chrono::steady_clock::now();
+  const std::chrono::duration<double> elapsed = end_time - start_time;
+  recordMessageArrivalDuration(mqtt_topic, elapsed.count());
 }
 
 
@@ -1596,6 +1613,43 @@ void MqttClient::recordMessageArrivalDuration(const std::string& topic,
     "===============================================================================\n";
 
   // Throttle aggregated log output to avoid flooding.
+  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "%s", report.c_str());
+}
+
+void MqttClient::recordRos2MqttDuration(const std::string &topic,
+                                        double duration_seconds) {
+  RCLCPP_DEBUG(get_logger(),
+               "Recording ros2mqtt processing duration for topic '%s': %.6fs",
+               topic.c_str(), duration_seconds);
+
+  constexpr std::size_t kMaxSamples = 50;
+  std::lock_guard<std::mutex> lock(ros2mqtt_durations_mutex_);
+  auto &dq = ros2mqtt_durations_[topic];
+  dq.push_back(duration_seconds);
+  if (dq.size() > kMaxSamples) dq.pop_front();
+
+  // Only build aggregated stats and throttle their output similar to arrival durations
+  auto compute_stats = [](const std::deque<double>& samples) {
+    struct Stats { double last{0.0}; double avg{0.0}; double min{0.0}; double max{0.0}; std::size_t count{0}; } s;
+    if (samples.empty()) return s;
+    s.count = samples.size();
+    s.last = samples.back();
+    double sum = 0.0; s.min = std::numeric_limits<double>::infinity(); s.max = -std::numeric_limits<double>::infinity();
+    for (double v : samples) { sum += v; if (v < s.min) s.min = v; if (v > s.max) s.max = v; }
+    s.avg = sum / static_cast<double>(samples.size());
+    return s;
+  };
+
+  std::string report;
+  report += "\n================ ros2mqtt stats (rolling window per topic) =================\n";
+  report += fmt::format("Window size (max samples per topic): {}\n", kMaxSamples);
+  for (const auto &kv : ros2mqtt_durations_) {
+    const auto &t = kv.first; const auto &samples = kv.second; const auto s = compute_stats(samples);
+    if (s.count == 0) continue;
+    report += fmt::format("  - {:<40} count={:<3} last={:.6f}s avg={:.6f}s min={:.6f}s max={:.6f}s\n",
+                          t, s.count, s.last, s.avg, s.min, s.max);
+  }
+  report += "===============================================================================\n";
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "%s", report.c_str());
 }
 

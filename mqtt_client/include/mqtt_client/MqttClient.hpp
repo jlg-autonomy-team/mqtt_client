@@ -585,6 +585,29 @@ class MqttClient : public rclcpp::Node,
    */
   void recordMessageArrivalDuration(const std::string& topic,
                                     double duration_seconds);
+
+  /**
+   * @brief Per-ROS-topic rolling window of ros2mqtt processing durations
+   * (seconds)
+   *
+   * Stores up to the last 50 durations for each ROS topic forwarded to MQTT.
+   */
+  std::unordered_map<std::string, std::deque<double>> ros2mqtt_durations_;
+  std::mutex ros2mqtt_durations_mutex_;
+
+  /**
+   * @brief Record a new ros2mqtt processing duration and log aggregated stats.
+   *
+   * Maintains a deque capped at 50 entries. After insertion, computes
+   * average, min, and max over the stored durations for all tracked ROS
+   * topics and logs them at DEBUG level.
+   *
+   * @param topic ROS topic name that was published to MQTT.
+   * @param duration_seconds Elapsed wall time spent in ros2mqtt() for the
+   *        given message (serialization + publish attempts).
+   */
+  void recordRos2MqttDuration(const std::string &topic,
+                              double duration_seconds);
 };
 
 
