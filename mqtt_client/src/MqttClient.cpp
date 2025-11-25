@@ -26,13 +26,16 @@ SOFTWARE.
 
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <vector>
+
+#JLG_CHANGES_START
+#include <chrono>
+#include <limits>
+#JLG_CHANGES_END
 
 #include <mqtt_client/MqttClient.hpp>
 #include <mqtt_client_interfaces/msg/ros_msg_type.hpp>
@@ -172,7 +175,7 @@ bool fixedMqtt2PrimitiveRos(mqtt::const_message_ptr mqtt_msg,
       std_msgs::msg::UInt8MultiArray msg;
       const std::string& str_msg = mqtt_msg->to_string();
       msg.data = std::vector<uint8_t>(str_msg.begin(), str_msg.end());
-
+      
       serializeRosMessage(msg, serialized_msg);
     } else {
       throw std::domain_error("Unhandled message type (" + msg_type + ")");
@@ -464,7 +467,7 @@ void MqttClient::loadParameters() {
       // ros2mqtt[k]/advanced/ros/queue_size
       rclcpp::Parameter queue_size_param;
       if (get_parameter(fmt::format("bridge.ros2mqtt.{}.advanced.ros.queue_size", ros_topic),
-            queue_size_param))
+                        queue_size_param))
         ros2mqtt.ros.queue_size = queue_size_param.as_int();
 
       rclcpp::Parameter durability_param;
@@ -517,7 +520,7 @@ void MqttClient::loadParameters() {
                   ros2mqtt.stamped ? "and measuring latency" : "");
     } else {
       RCLCPP_WARN(get_logger(),
-        fmt::format("Parameter 'bridge.ros2mqtt.{}' is missing subparameter "
+                  fmt::format("Parameter 'bridge.ros2mqtt.{}' is missing subparameter "
                   "'mqtt_topic', will be ignored", ros_topic).c_str());
     }
   }
@@ -554,7 +557,7 @@ void MqttClient::loadParameters() {
       // mqtt2ros[k]/advanced/ros/queue_size
       rclcpp::Parameter queue_size_param;
       if (get_parameter(fmt::format("bridge.mqtt2ros.{}.advanced.ros.queue_size", mqtt_topic),
-            queue_size_param))
+                        queue_size_param))
         mqtt2ros.ros.queue_size = queue_size_param.as_int();
 
       rclcpp::Parameter durability_param;
@@ -603,7 +606,7 @@ void MqttClient::loadParameters() {
     }
     else {
       RCLCPP_WARN(get_logger(),
-        fmt::format("Parameter 'bridge.ros2mqtt.{}' is missing subparameter "
+                fmt::format("Parameter 'bridge.ros2mqtt.{}' is missing subparameter "
                 "'ros_topic', will be ignored", mqtt_topic).c_str());
     }
   }
@@ -657,7 +660,6 @@ std::filesystem::path MqttClient::resolvePath(const std::string& path_string) {
 
 
 void MqttClient::setup() {
-  RCLCPP_INFO(get_logger(), "RUNNING MQTT CLIENT FROM SOURCE");
 
   // pre-compute timestamp length
   builtin_interfaces::msg::Time tmp_stamp;
@@ -679,11 +681,11 @@ void MqttClient::setup() {
 
   // create dynamic mappings services
   new_ros2mqtt_bridge_service_ =
-    create_service<mqtt_client_interfaces::srv::NewRos2MqttBridge>(
+  create_service<mqtt_client_interfaces::srv::NewRos2MqttBridge>(
       "~/new_ros2mqtt_bridge", std::bind(&MqttClient::newRos2MqttBridge, this,
                                 std::placeholders::_1, std::placeholders::_2));
   new_mqtt2ros_bridge_service_ =
-    create_service<mqtt_client_interfaces::srv::NewMqtt2RosBridge>(
+  create_service<mqtt_client_interfaces::srv::NewMqtt2RosBridge>(
       "~/new_mqtt2ros_bridge", std::bind(&MqttClient::newMqtt2RosBridge, this,
                                 std::placeholders::_1, std::placeholders::_2));
 
@@ -778,11 +780,11 @@ void MqttClient::setupSubscriptions() {
   {
           if (! ros2mqtt.fixed_type)
                   return true;
-      if (ros2mqtt.ros.qos.reliability == std::nullopt ||
-          ros2mqtt.ros.qos.durability == std::nullopt)
-        return true;
-      return false;
-    };
+          if (ros2mqtt.ros.qos.reliability == std::nullopt ||
+              ros2mqtt.ros.qos.durability == std::nullopt)
+                  return true;
+          return false;
+  };
 
   for (auto& [ros_topic, ros2mqtt] : ros2mqtt_) {
 
@@ -796,8 +798,8 @@ void MqttClient::setupSubscriptions() {
           continue;
 
         auto  const qos = rclcpp::QoS(ros2mqtt.ros.queue_size)
-                           .reliability(*ros2mqtt.ros.qos.reliability)
-                           .durability(*ros2mqtt.ros.qos.durability);
+                            .reliability(*ros2mqtt.ros.qos.reliability)
+                            .durability(*ros2mqtt.ros.qos.durability);
 
         ros2mqtt.ros.subscriber = create_generic_subscription(
           ros_topic, ros2mqtt.ros.msg_type, qos, bound_callback_func);
@@ -834,7 +836,7 @@ void MqttClient::setupSubscriptions() {
             ros_topic, msg_type, *qos, bound_callback_func);
 
           RCLCPP_INFO(get_logger(), "Subscribed ROS topic '%s' of type '%s'",
-                      ros_topic.c_str(), msg_type.c_str());
+                     ros_topic.c_str(), msg_type.c_str());
         } catch (rclcpp::exceptions::RCLError& e) {
           RCLCPP_ERROR(get_logger(), "Failed to create generic subscriber: %s",
                        e.what());
@@ -857,8 +859,8 @@ void MqttClient::setupPublishers() {
 
     try {
       const auto qos = rclcpp::QoS(mqtt2ros.ros.queue_size)
-                         .durability(mqtt2ros.ros.qos.durability)
-                         .reliability(mqtt2ros.ros.qos.reliability);
+        .durability(mqtt2ros.ros.qos.durability)
+        .reliability(mqtt2ros.ros.qos.reliability);
       mqtt2ros.ros.publisher = create_generic_publisher(
         mqtt2ros.ros.topic, mqtt2ros.ros.msg_type, qos);
 
@@ -955,8 +957,6 @@ void MqttClient::ros2mqtt(
   const std::shared_ptr<rclcpp::SerializedMessage>& serialized_msg,
   const std::string& ros_topic) {
 
-  const auto start_time = std::chrono::steady_clock::now();
-
   Ros2MqttInterface& ros2mqtt = ros2mqtt_[ros_topic];
   std::string mqtt_topic = ros2mqtt.mqtt.topic;
   std::vector<uint8_t> payload_buffer;
@@ -982,10 +982,6 @@ void MqttClient::ros2mqtt(
                   "Cannot send ROS message of type '%s' as primitive message, "
                   "check supported primitive types",
                   ros_msg_type.name.c_str());
-      // Record duration for failed primitive attempt before returning
-      const auto end_time = std::chrono::steady_clock::now();
-      const std::chrono::duration<double> elapsed = end_time - start_time;
-      recordRos2MqttDuration(ros_topic, elapsed.count());
       return;
     }
 
@@ -1030,8 +1026,8 @@ void MqttClient::ros2mqtt(
 
       // copy serialized ROS message to payload [-, R]
       std::copy(serialized_msg->get_rcl_serialized_message().buffer,
-        serialized_msg->get_rcl_serialized_message().buffer + msg_length,
-        payload_buffer.begin() + msg_offset);
+                serialized_msg->get_rcl_serialized_message().buffer + msg_length,
+                payload_buffer.begin() + msg_offset);
     } else {
 
       // directly build payload buffer on top of serialized message
@@ -1073,17 +1069,11 @@ void MqttClient::ros2mqtt(
       "Publishing ROS message type information to MQTT topic '%s' failed: %s",
       mqtt_topic.c_str(), e.what());
   }
-
-  // Record total processing duration for ros2mqtt
-  const auto end_time = std::chrono::steady_clock::now();
-  const std::chrono::duration<double> elapsed = end_time - start_time;
-  recordRos2MqttDuration(ros_topic, elapsed.count());
 }
 
 
 void MqttClient::mqtt2ros(mqtt::const_message_ptr mqtt_msg,
                           const rclcpp::Time& arrival_stamp) {
-  const auto start_time = std::chrono::steady_clock::now();
   std::string mqtt_topic = mqtt_msg->get_topic();
   Mqtt2RosInterface& mqtt2ros = mqtt2ros_[mqtt_topic];
   auto& payload = mqtt_msg->get_payload_ref();
@@ -1137,11 +1127,6 @@ void MqttClient::mqtt2ros(mqtt::const_message_ptr mqtt_msg,
     "Sending ROS message of type '%s' from MQTT broker to ROS topic '%s' ...",
     mqtt2ros.ros.msg_type.c_str(), mqtt2ros.ros.topic.c_str());
   mqtt2ros.ros.publisher->publish(serialized_msg);
-
-  // Record processing duration now that message has been published
-  const auto end_time = std::chrono::steady_clock::now();
-  const std::chrono::duration<double> elapsed = end_time - start_time;
-  recordMessageArrivalDuration(mqtt_topic, elapsed.count());
 }
 
 
@@ -1234,8 +1219,8 @@ void MqttClient::mqtt2primitive(mqtt::const_message_ptr mqtt_msg) {
     // recreate generic publisher
     try {
       const auto qos = rclcpp::QoS(mqtt2ros.ros.queue_size)
-                         .durability(mqtt2ros.ros.qos.durability)
-                         .reliability(mqtt2ros.ros.qos.reliability);
+          .durability(mqtt2ros.ros.qos.durability)
+          .reliability(mqtt2ros.ros.qos.reliability);
       mqtt2ros.ros.publisher = create_generic_publisher(
         mqtt2ros.ros.topic, ros_msg_type, qos);
     } catch (rclcpp::exceptions::RCLError& e) {
@@ -1264,8 +1249,8 @@ void MqttClient::mqtt2fixed(mqtt::const_message_ptr mqtt_msg) {
   if (!fixedMqtt2PrimitiveRos(mqtt_msg, mqtt2ros.ros.msg_type, serialized_msg)) {
     RCLCPP_WARN(
       get_logger(),
-                "Could not convert mqtt message into type %s on topic %s ...",
-                mqtt2ros.ros.msg_type.c_str(), mqtt2ros.ros.topic.c_str());
+      "Could not convert mqtt message into type %s on topic %s ...",
+      mqtt2ros.ros.msg_type.c_str(), mqtt2ros.ros.topic.c_str());
   } else {
 
     if (!mqtt2ros.ros.publisher)
@@ -1277,8 +1262,8 @@ void MqttClient::mqtt2fixed(mqtt::const_message_ptr mqtt_msg) {
       // recreate generic publisher
       try {
         const auto qos = rclcpp::QoS(mqtt2ros.ros.queue_size)
-                           .durability(mqtt2ros.ros.qos.durability)
-                           .reliability(mqtt2ros.ros.qos.reliability);
+          .durability(mqtt2ros.ros.qos.durability)
+          .reliability(mqtt2ros.ros.qos.reliability);
         mqtt2ros.ros.publisher = create_generic_publisher(
           mqtt2ros.ros.topic, mqtt2ros.ros.msg_type, qos);
 
@@ -1370,16 +1355,16 @@ void MqttClient::newRos2MqttBridge(
   if (ros2mqtt.stamped && ros2mqtt.primitive) {
         RCLCPP_WARN(
           get_logger(),
-                "Timestamp will not be injected into primitive messages on ROS "
-                "topic '%s'",
-                request->ros_topic.c_str());
-    ros2mqtt.stamped = false;
+          "Timestamp will not be injected into primitive messages on ROS "
+          "topic '%s'",
+          request->ros_topic.c_str());
+        ros2mqtt.stamped = false;
   }
 
   RCLCPP_INFO(get_logger(), "Bridging %sROS topic '%s' to MQTT topic '%s' %s",
                   ros2mqtt.primitive ? "primitive " : "", request->ros_topic.c_str(),
                   ros2mqtt.mqtt.topic.c_str(),
-              ros2mqtt.stamped ? "and measuring latency" : "");
+                  ros2mqtt.stamped ? "and measuring latency" : "");
 
   // (re-)setup ROS subscriptions
   setupSubscriptions();
@@ -1408,7 +1393,7 @@ void MqttClient::newMqtt2RosBridge(
 
   RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to %sROS topic '%s'",
                   request->mqtt_topic.c_str(), mqtt2ros.primitive ? "primitive " : "",
-              mqtt2ros.ros.topic.c_str());
+                  mqtt2ros.ros.topic.c_str());
 
   // subscribe to the MQTT topic
   std::string mqtt_topic_to_subscribe = request->mqtt_topic;
@@ -1421,7 +1406,6 @@ void MqttClient::newMqtt2RosBridge(
 }
 
 void MqttClient::message_arrived(mqtt::const_message_ptr mqtt_msg) {
-  const auto start_time = std::chrono::steady_clock::now();
 
   // instantly take arrival timestamp
   rclcpp::Time arrival_stamp(
@@ -1441,10 +1425,6 @@ void MqttClient::message_arrived(mqtt::const_message_ptr mqtt_msg) {
       } else {
         mqtt2primitive(mqtt_msg);
       }
-      // Compute duration and record statistics before returning
-      const auto end_time = std::chrono::steady_clock::now();
-      const std::chrono::duration<double> elapsed = end_time - start_time;
-      recordMessageArrivalDuration(mqtt_msg->get_topic(), elapsed.count());
       return;
     }
   }
@@ -1499,8 +1479,8 @@ void MqttClient::message_arrived(mqtt::const_message_ptr mqtt_msg) {
       // recreate generic publisher
       try {
         const auto qos = rclcpp::QoS(mqtt2ros.ros.queue_size)
-                           .durability(mqtt2ros.ros.qos.durability)
-                           .reliability(mqtt2ros.ros.qos.reliability);
+          .durability(mqtt2ros.ros.qos.durability)
+          .reliability(mqtt2ros.ros.qos.reliability);
         mqtt2ros.ros.publisher = create_generic_publisher(
           mqtt2ros.ros.topic, ros_msg_type.name, qos);
       } catch (rclcpp::exceptions::RCLError& e) {
@@ -1529,11 +1509,6 @@ void MqttClient::message_arrived(mqtt::const_message_ptr mqtt_msg) {
         mqtt_topic.c_str());
     }
   }
-
-  // Compute duration and record statistics
-  const auto end_time = std::chrono::steady_clock::now();
-  const std::chrono::duration<double> elapsed = end_time - start_time;
-  recordMessageArrivalDuration(mqtt_msg->get_topic(), elapsed.count());
 }
 
 
@@ -1559,6 +1534,8 @@ void MqttClient::on_failure(const mqtt::token& token) {
     token.get_return_code());
   is_connected_ = false;
 }
+
+#JLG_CHANGES_START
 
 void MqttClient::recordMessageArrivalDuration(const std::string& topic,
                                               double duration_seconds) {
@@ -1652,5 +1629,7 @@ void MqttClient::recordRos2MqttDuration(const std::string &topic,
   report += "===============================================================================\n";
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "%s", report.c_str());
 }
+
+#JLG_CHANGES_END
 
 }  // namespace mqtt_client

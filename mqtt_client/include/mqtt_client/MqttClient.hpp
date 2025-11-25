@@ -27,14 +27,17 @@ SOFTWARE.
 
 #pragma once
 
-#include <deque>
 #include <filesystem>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
+
+#JLG_CHANGES_START
+#include <deque>
+#include <mutex>
 #include <unordered_map>
+#JLG_CHANGES_END
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -76,8 +79,8 @@ class MqttClient : public rclcpp::Node,
   explicit MqttClient(const rclcpp::NodeOptions& options);
 
  protected:
-  struct Ros2MqttInterface;
-  struct Mqtt2RosInterface;
+   struct Ros2MqttInterface;
+   struct Mqtt2RosInterface;
 
   /**
    * @brief Loads ROS parameters from parameter server.
@@ -197,9 +200,9 @@ class MqttClient : public rclcpp::Node,
    *
    * @returns The compatible QoS or nullopt if no compatible combination is found
    */
-  std::optional<rclcpp::QoS> getCompatibleQoS(
-    const std::string& ros_topic, const rclcpp::TopicEndpointInfo& tei,
-    const Ros2MqttInterface& ros2mqtt) const;
+   std::optional<rclcpp::QoS> getCompatibleQoS(
+     const std::string& ros_topic, const rclcpp::TopicEndpointInfo& tei,
+     const Ros2MqttInterface& ros2mqtt) const;
 
   /**
    * @brief Get the candidate topic endpoints for subscription matching
@@ -208,8 +211,8 @@ class MqttClient : public rclcpp::Node,
    *
    * @returns The compatible QoS or nullopt if no compatible combination is found
    */
-  std::vector<rclcpp::TopicEndpointInfo> getCandidatePublishers(
-    const std::string& ros_topic, const Ros2MqttInterface& ros2mqtt) const;
+   std::vector<rclcpp::TopicEndpointInfo> getCandidatePublishers(
+     const std::string& ros_topic, const Ros2MqttInterface& ros2mqtt) const;
 
   /**
    * @brief Setup any subscriptions we can.
@@ -425,7 +428,7 @@ class MqttClient : public rclcpp::Node,
       std::string password;                  ///< decryption password for private key
       int version;                           ///< TLS version (https://github.com/eclipse/paho.mqtt.cpp/blob/master/src/mqtt/ssl_options.h#L305)
       bool verify;                           ///< Verify the client should conduct
-                              ///< post-connect checks
+                                             ///< post-connect checks
       bool server_cert_auth;                 ///< whether to verify the server certificate
       std::vector<std::string> alpn_protos;  ///< list of ALPN protocols
     } tls;                                   ///< SSL/TLS-related variables
@@ -480,7 +483,7 @@ class MqttClient : public rclcpp::Node,
     } ros;      ///< ROS-related variables
     bool fixed_type = false; ///< whether the published ros message type is specified explicitly
     bool primitive = false;  ///< whether to publish as primitive message (if
-                              ///< coming from non-ROS MQTT client)
+                             ///< coming from non-ROS MQTT client)
     bool stamped = false;    ///< whether timestamp is injected
   };
 
@@ -563,6 +566,7 @@ class MqttClient : public rclcpp::Node,
    */
   uint32_t stamp_length_;
 
+#JLG_CHANGES_START
   /**
    * @brief Per-MQTT-topic rolling window of message_arrived compute durations
    * (seconds)
@@ -608,6 +612,7 @@ class MqttClient : public rclcpp::Node,
    */
   void recordRos2MqttDuration(const std::string &topic,
                               double duration_seconds);
+#JLG_CHANGES_END
 };
 
 
