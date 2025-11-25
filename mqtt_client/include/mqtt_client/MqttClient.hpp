@@ -33,11 +33,11 @@ SOFTWARE.
 #include <optional>
 #include <string>
 
-#JLG_CHANGES_START
+// JLG_CHANGES_START
 #include <deque>
 #include <mutex>
 #include <unordered_map>
-#JLG_CHANGES_END
+// JLG_CHANGES_END
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -50,6 +50,9 @@ SOFTWARE.
 #include <rclcpp/qos.hpp>
 #include <std_msgs/msg/float64.hpp>
 
+// JLG_CHANGES_START
+#include <mqtt_client_interfaces/srv/remove_bridges.hpp>
+// JLG_CHANGES_END
 
 /**
  * @brief Namespace for the mqtt_client package
@@ -526,6 +529,20 @@ class MqttClient : public rclcpp::Node,
   rclcpp::Service<mqtt_client_interfaces::srv::NewMqtt2RosBridge>::SharedPtr
     new_mqtt2ros_bridge_service_;
 
+// JLG_CHANGES_START
+  /**
+   * @brief ROS Service server for removing dynamic MQTT to ROS mappings.
+   */
+  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridges>::SharedPtr
+    remove_mqtt2ros_bridges_service_;
+
+  /**
+   * @brief ROS Service server for removing dynamic ROS to MQTT mappings.
+   */
+  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridges>::SharedPtr
+    remove_ros2mqtt_bridges_service_;
+// JLG_CHANGES_END
+
   /**
    * @brief Status variable keeping track of connection status to broker
    */
@@ -566,7 +583,28 @@ class MqttClient : public rclcpp::Node,
    */
   uint32_t stamp_length_;
 
-#JLG_CHANGES_START
+// JLG_CHANGES_START
+
+  /**
+   * @brief ROS service that removes all ROS -> MQTT bridges.
+   *
+   * @param request  service request
+   * @param response service response
+   */
+  void removeRos2MqttBridges(
+    mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
+    mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response);
+
+  /**
+   * @brief ROS service that removes an MQTT -> ROS bridges.
+   *
+   * @param request  service request
+   * @param response service response
+   */
+  void removeMqtt2RosBridges(
+    mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
+    mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response);
+
   /**
    * @brief Per-MQTT-topic rolling window of message_arrived compute durations
    * (seconds)
@@ -612,7 +650,7 @@ class MqttClient : public rclcpp::Node,
    */
   void recordRos2MqttDuration(const std::string &topic,
                               double duration_seconds);
-#JLG_CHANGES_END
+// JLG_CHANGES_END
 };
 
 
