@@ -1548,26 +1548,26 @@ void MqttClient::on_failure(const mqtt::token& token) {
 }
 
 // JLG_CHANGES_START
-void removeRos2MqttBridges(
+void MqttClient::removeRos2MqttBridges(
   mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
   mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response) {
 
     (void) request; // Avoid compiler warning for unused parameter.
 
-    RCLCPP_INFO(get_logger(), "Removing %i ros2mqtt bridges", ros2mqtt_.size());
+    RCLCPP_INFO(get_logger(), "Removing %li ros2mqtt bridges", ros2mqtt_.size());
 
     ros2mqtt_.clear();
     ros2mqtt_durations_.clear();
-    resposne->success = true;
+    response->success = true;
 }
 
-void removeMqtt2RosBridges(
-  mqtt_client_interfaces::sshrv::RemoveBridges::Request::SharedPtr request,
+void MqttClient::removeMqtt2RosBridges(
+  mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
   mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response) {
 
     (void) request; // Avoid compiler warning for unused parameter.
 
-    RCLCPP_INFO(get_logger(), "Removing %i mqtt2ros bridges", mqtt2ros_.size());
+    RCLCPP_INFO(get_logger(), "Removing %li mqtt2ros bridges", mqtt2ros_.size());
 
     for (const auto& [mqtt_topic, mqtt2ros] : mqtt2ros_) {
       std::string mqtt_topic_to_unsubscribe = mqtt_topic;
@@ -1577,7 +1577,7 @@ void removeMqtt2RosBridges(
     }
     mqtt2ros_.clear();
     arrival_durations_.clear();
-    resposne->success = true;
+    response->success = true;
 }
 
 void MqttClient::recordMessageArrivalDuration(const std::string& topic,
