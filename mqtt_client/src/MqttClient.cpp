@@ -1018,10 +1018,14 @@ void MqttClient::ros2mqtt(
                            msg_type_buffer.size(), ros2mqtt.mqtt.qos, true);
       client_->publish(mqtt_msg);
     } catch (const mqtt::exception& e) {
-      RCLCPP_WARN(
+// JLG_CHANGES_START
+      RCLCPP_WARN_THROTTLE(
         get_logger(),
+        *get_clock(),
+        2000,
         "Publishing ROS message type information to MQTT topic '%s' failed: %s",
         mqtt_topic.c_str(), e.what());
+// JLG_CHANGES_END
     }
 
     // build MQTT payload for ROS message (R) as [R]
@@ -1076,10 +1080,14 @@ void MqttClient::ros2mqtt(
       ros2mqtt.mqtt.qos, ros2mqtt.mqtt.retained);
     client_->publish(mqtt_msg);
   } catch (const mqtt::exception& e) {
-    RCLCPP_WARN(
+// JLG_CHANGES_START
+    RCLCPP_WARN_THROTTLE(
       get_logger(),
-      "Publishing ROS message type information to MQTT topic '%s' failed: %s",
+      *get_clock(),
+      2000,
+      "Publishing ROS message to MQTT topic '%s' failed: %s",
       mqtt_topic.c_str(), e.what());
+// JLG_CHANGES_END
   }
 }
 
