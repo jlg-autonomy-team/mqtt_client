@@ -1335,7 +1335,6 @@ void MqttClient::connection_lost(const std::string& cause) {
   RCLCPP_ERROR(get_logger(),
                "Connection to broker lost, will try to reconnect...");
   is_connected_ = false;
-  connect();
 }
 
 
@@ -1654,3 +1653,4 @@ void MqttClient::recordRos2MqttDuration(const std::string &topic,
 }
 
 }  // namespace mqtt_client
+
