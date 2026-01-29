@@ -545,6 +545,10 @@ class MqttClient : public rclcpp::Node,
 
   /**
    * @brief MQTT2ROS connection variables sorted by MQTT topic
+   * 
+   * @note This is used to get around an issue when deleting a publisher.
+   * The publisher could still be in use in another thread. Removing an in
+   * use publisher results in an unrecoverable DDS fault.
    */
   std::vector<Mqtt2RosInterface> mqtt2ros_graveyard_;
 
