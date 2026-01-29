@@ -37,6 +37,7 @@ SOFTWARE.
 #include <deque>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 // JLG_CHANGES_END
 
 #define FMT_HEADER_ONLY
@@ -541,6 +542,16 @@ class MqttClient : public rclcpp::Node,
    */
   rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridges>::SharedPtr
     remove_ros2mqtt_bridges_service_;
+
+  /**
+   * @brief MQTT2ROS connection variables sorted by MQTT topic
+   */
+  std::vector<Mqtt2RosInterface> mqtt2ros_graveyard_;
+
+    /**
+   * @brief mutex to protect access to the mqtt2ros_ map
+   */
+  std::mutex mqtt2ros_mutex_;
 // JLG_CHANGES_END
 
   /**

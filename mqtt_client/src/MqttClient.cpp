@@ -861,6 +861,9 @@ void MqttClient::setupSubscriptions() {
 
 void MqttClient::setupPublishers() {
 
+// JLG_CHANGES_START
+  std::lock_guard<std::mutex> lock(mqtt2ros_mutex_);
+// JLG_CHANGES_END
   for (auto& [mqtt_topic, mqtt2ros] : mqtt2ros_) {
     if (mqtt2ros.ros.publisher)
       continue;
@@ -1316,6 +1319,10 @@ void MqttClient::connected(const std::string& cause) {
   RCLCPP_INFO(get_logger(), "Connected to broker at '%s'%s",
               client_->get_server_uri().c_str(), as_client.c_str());
 
+// JLG_CHANGES_START
+  std::lock_guard<std::mutex> lock(mqtt2ros_mutex_);
+// JLG_CHANGES_END
+
   // subscribe MQTT topics
   for (const auto& [mqtt_topic, mqtt2ros] : mqtt2ros_) {
     if (!mqtt2ros.primitive) {
@@ -1395,6 +1402,10 @@ void MqttClient::newMqtt2RosBridge(
   mqtt_client_interfaces::srv::NewMqtt2RosBridge::Request::SharedPtr request,
   mqtt_client_interfaces::srv::NewMqtt2RosBridge::Response::SharedPtr response){
 
+// JLG_CHANGES_START
+  std::lock_guard<std::mutex> lock(mqtt2ros_mutex_);
+// JLG_CHANGES_END
+
   // add mapping definition to mqtt2ros_
   Mqtt2RosInterface& mqtt2ros = mqtt2ros_[request->mqtt_topic];
   mqtt2ros.ros.is_stale = true;
@@ -1433,6 +1444,10 @@ void MqttClient::message_arrived(mqtt::const_message_ptr mqtt_msg) {
   std::string mqtt_topic = mqtt_msg->get_topic();
   RCLCPP_DEBUG(get_logger(), "Received MQTT message on topic '%s'",
                mqtt_topic.c_str());
+
+// JLG_CHANGES_START
+  std::lock_guard<std::mutex> lock(mqtt2ros_mutex_);
+// JLG_CHANGES_END
 
   // publish directly if primitive
   if (mqtt2ros_.count(mqtt_topic) > 0) {
@@ -1559,12 +1574,28 @@ void MqttClient::removeRos2MqttBridges(
   mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
   mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response) {
 
-    (void) request; // Avoid compiler warning for unused parameter.
+    const auto& ros_topic = request->ros_topic;
+    const auto& mqtt_topic = request->mqtt_topic;
 
-    RCLCPP_INFO(get_logger(), "Removing %li ros2mqtt bridges", ros2mqtt_.size());
+    // verify ROS and MQTT topics exist
+    auto itr = ros2mqtt_.find(ros_topic);
+    if (itr == ros2mqtt_.end()) { 
+      response->success = false;
+      RCLCPP_WARN(get_logger(), "No ros2mqtt bridge found for ROS topic '%s'", ros_topic.c_str());
+      return;
+    }
 
-    ros2mqtt_.clear();
-    ros2mqtt_durations_.clear();
+    if (itr->second.mqtt.topic != mqtt_topic) {
+      response->success = false;
+      RCLCPP_WARN(get_logger(), "No ros2mqtt bridge found for MQTT topic '%s'", mqtt_topic.c_str());
+      return;
+    }
+
+    ros2mqtt_.erase(itr);
+    ros2mqtt_durations_.erase(ros_topic);
+
+    RCLCPP_INFO(get_logger(), "Removed ros2mqtt bridge for ROS topic '%s' and MQTT topic '%s'",
+                ros_topic.c_str(), mqtt_topic.c_str());
     response->success = true;
 }
 
@@ -1572,18 +1603,34 @@ void MqttClient::removeMqtt2RosBridges(
   mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
   mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response) {
 
-    (void) request; // Avoid compiler warning for unused parameter.
+    const auto& ros_topic = request->ros_topic;
+    const auto& mqtt_topic = request->mqtt_topic;
 
-    RCLCPP_INFO(get_logger(), "Removing %li mqtt2ros bridges", mqtt2ros_.size());
-
-    for (const auto& [mqtt_topic, mqtt2ros] : mqtt2ros_) {
-      std::string mqtt_topic_to_unsubscribe = mqtt_topic;
-      if (!mqtt2ros.primitive)
-        mqtt_topic_to_unsubscribe = kRosMsgTypeMqttTopicPrefix + mqtt_topic;
-      client_->unsubscribe(mqtt_topic_to_unsubscribe);
+    // verify ROS and MQTT topics exist
+    std::lock_guard<std::mutex> lock(mqtt2ros_mutex_);
+    auto itr = mqtt2ros_.find(mqtt_topic);
+    if (itr == mqtt2ros_.end()) { 
+      response->success = false;
+      RCLCPP_WARN(get_logger(), "No mqtt2ros bridge found for MQTT topic '%s'", mqtt_topic.c_str());
+      return;
     }
-    mqtt2ros_.clear();
-    arrival_durations_.clear();
+
+    if (itr->second.ros.topic != ros_topic) {
+      response->success = false;
+      RCLCPP_WARN(get_logger(), "No mqtt2ros bridge found for ROS topic '%s'", ros_topic.c_str());
+      return;
+    }
+
+    if (!itr->second.primitive) {
+      client_->unsubscribe(kRosMsgTypeMqttTopicPrefix + mqtt_topic);
+    }
+    client_->unsubscribe(mqtt_topic);
+
+    mqtt2ros_graveyard_.push_back(std::move(itr->second));
+    mqtt2ros_.erase(itr);
+    arrival_durations_.erase(mqtt_topic);
+    RCLCPP_INFO(get_logger(), "Removed mqtt2ros bridge for MQTT topic '%s' and ROS topic '%s'",
+                mqtt_topic.c_str(), ros_topic.c_str());
     response->success = true;
 }
 
