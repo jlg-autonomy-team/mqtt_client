@@ -692,12 +692,12 @@ void MqttClient::setup() {
 // JLG_CHANGES_START
   remove_mqtt2ros_bridge_service_ =
   create_service<mqtt_client_interfaces::srv::RemoveBridge>(
-      "~/remove_mqtt2ros_bridges", std::bind(&MqttClient::removeMqtt2RosBridge, this,
+      "~/remove_mqtt2ros_bridge", std::bind(&MqttClient::removeMqtt2RosBridge, this,
                                 std::placeholders::_1, std::placeholders::_2));
 
   remove_ros2mqtt_bridge_service_ =
   create_service<mqtt_client_interfaces::srv::RemoveBridge>(
-      "~/remove_ros2mqtt_bridges", std::bind(&MqttClient::removeRos2MqttBridge, this,
+      "~/remove_ros2mqtt_bridge", std::bind(&MqttClient::removeRos2MqttBridge, this,
                                 std::placeholders::_1, std::placeholders::_2));
 // JLG_CHANGES_END
 
