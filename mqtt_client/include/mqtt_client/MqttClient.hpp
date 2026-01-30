@@ -52,7 +52,7 @@ SOFTWARE.
 #include <std_msgs/msg/float64.hpp>
 
 // JLG_CHANGES_START
-#include <mqtt_client_interfaces/srv/remove_bridges.hpp>
+#include <mqtt_client_interfaces/srv/remove_bridge.hpp>
 // JLG_CHANGES_END
 
 /**
@@ -534,14 +534,14 @@ class MqttClient : public rclcpp::Node,
   /**
    * @brief ROS Service server for removing dynamic MQTT to ROS mappings.
    */
-  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridges>::SharedPtr
-    remove_mqtt2ros_bridges_service_;
+  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridge>::SharedPtr
+    remove_mqtt2ros_bridge_service_;
 
   /**
    * @brief ROS Service server for removing dynamic ROS to MQTT mappings.
    */
-  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridges>::SharedPtr
-    remove_ros2mqtt_bridges_service_;
+  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridge>::SharedPtr
+    remove_ros2mqtt_bridge_service_;
 
   /**
    * @brief MQTT2ROS connection variables sorted by MQTT topic
@@ -601,24 +601,24 @@ class MqttClient : public rclcpp::Node,
 // JLG_CHANGES_START
 
   /**
-   * @brief ROS service that removes all ROS -> MQTT bridges.
+   * @brief ROS service that removes a ROS -> MQTT bridge.
    *
    * @param request  service request
    * @param response service response
    */
-  void removeRos2MqttBridges(
-    mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
-    mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response);
+  void removeRos2MqttBridge(
+    mqtt_client_interfaces::srv::RemoveBridge::Request::SharedPtr request,
+    mqtt_client_interfaces::srv::RemoveBridge::Response::SharedPtr response);
 
   /**
-   * @brief ROS service that removes an MQTT -> ROS bridges.
+   * @brief ROS service that removes an MQTT -> ROS bridge.
    *
    * @param request  service request
    * @param response service response
    */
-  void removeMqtt2RosBridges(
-    mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
-    mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response);
+  void removeMqtt2RosBridge(
+    mqtt_client_interfaces::srv::RemoveBridge::Request::SharedPtr request,
+    mqtt_client_interfaces::srv::RemoveBridge::Response::SharedPtr response);
 
   /**
    * @brief Per-MQTT-topic rolling window of message_arrived compute durations

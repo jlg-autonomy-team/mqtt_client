@@ -11,7 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   srv/ros2/NewMqtt2RosBridge.srv
   srv/ros2/NewRos2MqttBridge.srv
 #JLG_CHANGES_START
-  srv/ros2/RemoveBridges.srv
+  srv/ros2/RemoveBridge.srv
 #JLG_CHANGES_END
   DEPENDENCIES std_msgs
 )

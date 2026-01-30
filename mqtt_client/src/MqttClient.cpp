@@ -690,14 +690,14 @@ void MqttClient::setup() {
                                 std::placeholders::_1, std::placeholders::_2));
 
 // JLG_CHANGES_START
-  remove_mqtt2ros_bridges_service_ =
-  create_service<mqtt_client_interfaces::srv::RemoveBridges>(
-      "~/remove_mqtt2ros_bridges", std::bind(&MqttClient::removeMqtt2RosBridges, this,
+  remove_mqtt2ros_bridge_service_ =
+  create_service<mqtt_client_interfaces::srv::RemoveBridge>(
+      "~/remove_mqtt2ros_bridges", std::bind(&MqttClient::removeMqtt2RosBridge, this,
                                 std::placeholders::_1, std::placeholders::_2));
 
-  remove_ros2mqtt_bridges_service_ =
-  create_service<mqtt_client_interfaces::srv::RemoveBridges>(
-      "~/remove_ros2mqtt_bridges", std::bind(&MqttClient::removeRos2MqttBridges, this,
+  remove_ros2mqtt_bridge_service_ =
+  create_service<mqtt_client_interfaces::srv::RemoveBridge>(
+      "~/remove_ros2mqtt_bridges", std::bind(&MqttClient::removeRos2MqttBridge, this,
                                 std::placeholders::_1, std::placeholders::_2));
 // JLG_CHANGES_END
 
@@ -1570,9 +1570,9 @@ void MqttClient::on_failure(const mqtt::token& token) {
 }
 
 // JLG_CHANGES_START
-void MqttClient::removeRos2MqttBridges(
-  mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
-  mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response) {
+void MqttClient::removeRos2MqttBridge(
+  mqtt_client_interfaces::srv::RemoveBridge::Request::SharedPtr request,
+  mqtt_client_interfaces::srv::RemoveBridge::Response::SharedPtr response) {
 
     const auto& ros_topic = request->ros_topic;
     const auto& mqtt_topic = request->mqtt_topic;
@@ -1599,9 +1599,9 @@ void MqttClient::removeRos2MqttBridges(
     response->success = true;
 }
 
-void MqttClient::removeMqtt2RosBridges(
-  mqtt_client_interfaces::srv::RemoveBridges::Request::SharedPtr request,
-  mqtt_client_interfaces::srv::RemoveBridges::Response::SharedPtr response) {
+void MqttClient::removeMqtt2RosBridge(
+  mqtt_client_interfaces::srv::RemoveBridge::Request::SharedPtr request,
+  mqtt_client_interfaces::srv::RemoveBridge::Response::SharedPtr response) {
 
     const auto& ros_topic = request->ros_topic;
     const auto& mqtt_topic = request->mqtt_topic;
