@@ -552,7 +552,7 @@ class MqttClient : public rclcpp::Node,
    */
   std::vector<Mqtt2RosInterface> mqtt2ros_graveyard_;
 
-    /**
+  /**
    * @brief mutex to protect access to the mqtt2ros_ map
    */
   std::mutex mqtt2ros_mutex_;
