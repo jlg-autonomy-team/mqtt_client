@@ -27,14 +27,18 @@ SOFTWARE.
 
 #pragma once
 
-#include <deque>
 #include <filesystem>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
+
+// JLG_CHANGES_START
+#include <deque>
+#include <mutex>
 #include <unordered_map>
+#include <vector>
+// JLG_CHANGES_END
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -47,6 +51,9 @@ SOFTWARE.
 #include <rclcpp/qos.hpp>
 #include <std_msgs/msg/float64.hpp>
 
+// JLG_CHANGES_START
+#include <mqtt_client_interfaces/srv/remove_bridge.hpp>
+// JLG_CHANGES_END
 
 /**
  * @brief Namespace for the mqtt_client package
@@ -76,8 +83,8 @@ class MqttClient : public rclcpp::Node,
   explicit MqttClient(const rclcpp::NodeOptions& options);
 
  protected:
-  struct Ros2MqttInterface;
-  struct Mqtt2RosInterface;
+   struct Ros2MqttInterface;
+   struct Mqtt2RosInterface;
 
   /**
    * @brief Loads ROS parameters from parameter server.
@@ -197,9 +204,9 @@ class MqttClient : public rclcpp::Node,
    *
    * @returns The compatible QoS or nullopt if no compatible combination is found
    */
-  std::optional<rclcpp::QoS> getCompatibleQoS(
-    const std::string& ros_topic, const rclcpp::TopicEndpointInfo& tei,
-    const Ros2MqttInterface& ros2mqtt) const;
+   std::optional<rclcpp::QoS> getCompatibleQoS(
+     const std::string& ros_topic, const rclcpp::TopicEndpointInfo& tei,
+     const Ros2MqttInterface& ros2mqtt) const;
 
   /**
    * @brief Get the candidate topic endpoints for subscription matching
@@ -208,8 +215,8 @@ class MqttClient : public rclcpp::Node,
    *
    * @returns The compatible QoS or nullopt if no compatible combination is found
    */
-  std::vector<rclcpp::TopicEndpointInfo> getCandidatePublishers(
-    const std::string& ros_topic, const Ros2MqttInterface& ros2mqtt) const;
+   std::vector<rclcpp::TopicEndpointInfo> getCandidatePublishers(
+     const std::string& ros_topic, const Ros2MqttInterface& ros2mqtt) const;
 
   /**
    * @brief Setup any subscriptions we can.
@@ -425,7 +432,7 @@ class MqttClient : public rclcpp::Node,
       std::string password;                  ///< decryption password for private key
       int version;                           ///< TLS version (https://github.com/eclipse/paho.mqtt.cpp/blob/master/src/mqtt/ssl_options.h#L305)
       bool verify;                           ///< Verify the client should conduct
-                              ///< post-connect checks
+                                             ///< post-connect checks
       bool server_cert_auth;                 ///< whether to verify the server certificate
       std::vector<std::string> alpn_protos;  ///< list of ALPN protocols
     } tls;                                   ///< SSL/TLS-related variables
@@ -480,7 +487,7 @@ class MqttClient : public rclcpp::Node,
     } ros;      ///< ROS-related variables
     bool fixed_type = false; ///< whether the published ros message type is specified explicitly
     bool primitive = false;  ///< whether to publish as primitive message (if
-                              ///< coming from non-ROS MQTT client)
+                             ///< coming from non-ROS MQTT client)
     bool stamped = false;    ///< whether timestamp is injected
   };
 
@@ -523,6 +530,34 @@ class MqttClient : public rclcpp::Node,
   rclcpp::Service<mqtt_client_interfaces::srv::NewMqtt2RosBridge>::SharedPtr
     new_mqtt2ros_bridge_service_;
 
+// JLG_CHANGES_START
+  /**
+   * @brief ROS Service server for removing dynamic MQTT to ROS mappings.
+   */
+  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridge>::SharedPtr
+    remove_mqtt2ros_bridge_service_;
+
+  /**
+   * @brief ROS Service server for removing dynamic ROS to MQTT mappings.
+   */
+  rclcpp::Service<mqtt_client_interfaces::srv::RemoveBridge>::SharedPtr
+    remove_ros2mqtt_bridge_service_;
+
+  /**
+   * @brief MQTT2ROS connection variables sorted by MQTT topic
+   * 
+   * @note This is used to get around an issue when deleting a publisher.
+   * The publisher could still be in use in another thread. Removing an in
+   * use publisher results in an unrecoverable DDS fault.
+   */
+  std::vector<Mqtt2RosInterface> mqtt2ros_graveyard_;
+
+  /**
+   * @brief mutex to protect access to the mqtt2ros_ map
+   */
+  std::mutex mqtt2ros_mutex_;
+// JLG_CHANGES_END
+
   /**
    * @brief Status variable keeping track of connection status to broker
    */
@@ -562,6 +597,28 @@ class MqttClient : public rclcpp::Node,
    * Message length of a serialized `builtin_interfaces::msg::Time` message
    */
   uint32_t stamp_length_;
+
+// JLG_CHANGES_START
+
+  /**
+   * @brief ROS service that removes a ROS -> MQTT bridge.
+   *
+   * @param request  service request
+   * @param response service response
+   */
+  void removeRos2MqttBridge(
+    mqtt_client_interfaces::srv::RemoveBridge::Request::SharedPtr request,
+    mqtt_client_interfaces::srv::RemoveBridge::Response::SharedPtr response);
+
+  /**
+   * @brief ROS service that removes an MQTT -> ROS bridge.
+   *
+   * @param request  service request
+   * @param response service response
+   */
+  void removeMqtt2RosBridge(
+    mqtt_client_interfaces::srv::RemoveBridge::Request::SharedPtr request,
+    mqtt_client_interfaces::srv::RemoveBridge::Response::SharedPtr response);
 
   /**
    * @brief Per-MQTT-topic rolling window of message_arrived compute durations
@@ -608,6 +665,7 @@ class MqttClient : public rclcpp::Node,
    */
   void recordRos2MqttDuration(const std::string &topic,
                               double duration_seconds);
+// JLG_CHANGES_END
 };
 
 
