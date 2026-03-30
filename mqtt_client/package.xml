@@ -20,6 +20,9 @@
   <depend>fmt</depend>
   <depend>mqtt_client_interfaces</depend>
   <depend>std_msgs</depend>
+  <!-- JLG_CHANGES_START -->
+  <depend>talos_msgs</depend>
+  <!-- JLG_CHANGES_END -->
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>libpaho-mqtt-dev</depend>

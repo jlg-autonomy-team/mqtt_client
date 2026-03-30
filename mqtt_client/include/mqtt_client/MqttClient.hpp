@@ -53,6 +53,7 @@ SOFTWARE.
 
 // JLG_CHANGES_START
 #include <mqtt_client_interfaces/srv/remove_bridge.hpp>
+#include <talos_msgs/msg/dtc.hpp>
 // JLG_CHANGES_END
 
 /**
@@ -229,6 +230,13 @@ class MqttClient : public rclcpp::Node,
    * @brief Setup any publishers that we can
    */
   void setupPublishers();
+
+  // JLG_CHANGES_START
+  /**
+     * @brief Publisher for DTC messages
+     */
+  rclcpp::Publisher<talos_msgs::msg::DTC>::SharedPtr dtc_pub_;
+  // JLG_CHANGES_END
 
   /**
    * @brief Sets up the client connection options and initializes the client
@@ -567,6 +575,13 @@ class MqttClient : public rclcpp::Node,
    * @brief Broker parameters
    */
   BrokerConfig broker_config_;
+
+  // JLG_CHANGES_START
+  /**
+   * @brief Broker comm loss DTC code
+  */
+  int broker_comm_loss_dtc_;
+  // JLG_CHANGES_END
 
   /**
    * @brief Client parameters
