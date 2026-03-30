@@ -327,6 +327,10 @@ void MqttClient::loadParameters() {
   declare_parameter("client.tls.password", rclcpp::ParameterType::PARAMETER_STRING, param_desc);
   param_desc.description = "whether to verify the server certificate";
   declare_parameter("client.tls.server_cert_auth", rclcpp::ParameterType::PARAMETER_BOOL, param_desc);
+  // JLG_CHANGES_START
+  declare_parameter("broker_comm_loss_dtc", rclcpp::ParameterType::PARAMETER_INTEGER, param_desc);
+  loadParameter("broker_comm_loss_dtc", broker_comm_loss_dtc_, static_cast<int>(talos_msgs::msg::DTC::NAVITHOR_SERVER_NETWORK_CONNECTIVITY_ERROR));
+  // JLG_CHANGES_END
 
   param_desc.description = "The list of topics to bridge from ROS to MQTT";
   const auto ros2mqtt_ros_topics = declare_parameter<std::vector<std::string>>("bridge.ros2mqtt.ros_topics", std::vector<std::string>(), param_desc);
@@ -863,6 +867,14 @@ void MqttClient::setupPublishers() {
 
 // JLG_CHANGES_START
   std::lock_guard<std::mutex> lock(mqtt2ros_mutex_);
+  
+  auto qos_reliable = rclcpp::QoS(rclcpp::KeepLast(1));
+  qos_reliable.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+  qos_reliable.durability(RMW_QOS_POLICY_DURABILITY_VOLATILE);
+  dtc_pub_ = this->create_publisher<talos_msgs::msg::DTC>(
+        "diagnostics/dtc_notification",
+        qos_reliable
+    );
 // JLG_CHANGES_END
   for (auto& [mqtt_topic, mqtt2ros] : mqtt2ros_) {
     if (mqtt2ros.ros.publisher)
@@ -1022,6 +1034,10 @@ void MqttClient::ros2mqtt(
       client_->publish(mqtt_msg);
     } catch (const mqtt::exception& e) {
 // JLG_CHANGES_START
+      talos_msgs::msg::DTC dtc_msg;
+      dtc_msg.dtc = broker_comm_loss_dtc_;
+      dtc_pub_->publish(dtc_msg);
+
       RCLCPP_WARN_THROTTLE(
         get_logger(),
         *get_clock(),
@@ -1084,6 +1100,10 @@ void MqttClient::ros2mqtt(
     client_->publish(mqtt_msg);
   } catch (const mqtt::exception& e) {
 // JLG_CHANGES_START
+    talos_msgs::msg::DTC dtc_msg;
+    dtc_msg.dtc = broker_comm_loss_dtc_;
+    dtc_pub_->publish(dtc_msg);
+
     RCLCPP_WARN_THROTTLE(
       get_logger(),
       *get_clock(),
