@@ -1164,7 +1164,15 @@ void MqttClient::mqtt2ros(mqtt::const_message_ptr mqtt_msg,
               &(payload[msg_offset]), msg_length);
   serialized_msg.get_rcl_serialized_message().buffer_length = msg_length;
 
+  // JLG_CHANGES_START
   // publish generic ROS message
+  if (!mqtt2ros.ros.publisher) {
+    RCLCPP_WARN(get_logger(),
+                "ROS publisher for topic '%s' is not initialized, skipping message",
+                mqtt2ros.ros.topic.c_str());
+    return;
+  }
+// JLG_CHANGES_END
   RCLCPP_DEBUG(
     get_logger(),
     "Sending ROS message of type '%s' from MQTT broker to ROS topic '%s' ...",
