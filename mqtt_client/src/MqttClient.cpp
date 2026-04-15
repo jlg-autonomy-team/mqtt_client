@@ -1167,7 +1167,9 @@ void MqttClient::mqtt2ros(mqtt::const_message_ptr mqtt_msg,
   // JLG_CHANGES_START
   // publish generic ROS message
   if (!mqtt2ros.ros.publisher) {
-    RCLCPP_WARN(get_logger(),
+    RCLCPP_WARN_THROTTLE(get_logger(),
+                *get_clock(),
+                5000,
                 "ROS publisher for topic '%s' is not initialized, skipping message",
                 mqtt2ros.ros.topic.c_str());
     return;
